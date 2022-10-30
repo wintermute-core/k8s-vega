@@ -26,3 +26,8 @@ https://github.com/vegaprotocol/go-wallet/tree/master#vega-wallet
 https://docs.fairground.vega.xyz/docs/wallet/
 
 https://github.com/vegaprotocol/Public_Test_Bridge_Tools/blob/master/docs/mew.md
+
+# License
+
+MIT
+
