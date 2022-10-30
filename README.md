@@ -3,12 +3,15 @@
 Steps to deploy Vega node in K8S:
 
 # Create namespace where to deploy vega
+
 kubectl create ns vega
 
 # Create access secret
+
 kubectl -n vega apply -f secret.yaml
 
 # Create reverse proxy configuration since vega wallet listen on 127.0.0.1
+
 kubectl  -n vega create configmap nginx-proxy --from-file=nginx.conf
 
 # Create STS and PVC
