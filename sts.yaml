@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vega
+  labels:
+    app: vega
+spec:
+  serviceName: vega
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vega
+  template:
+    metadata:
+      labels:
+        app: vega
+    spec:
+      initContainers:
+      - name: init-vega
+        image: docker.io/vegaprotocol/go-wallet:v0.9.0-pre3
+        command:
+        - 'sh'
+        - '-c'
+        - | 
+          username=$(cat /etc/vega-secrets/username)
+          echo "Running init"
+          go-wallet init -o json --home /vega
+          if [[ ! -f /vega/wallets/"${username}" ]]; then
+            echo "Vega Key generation"
+            go-wallet key generate --name "${username}" --passphrase-file /etc/vega-secrets/password -o json --home /vega
+          fi
+        volumeMounts:
+        - name: vega-data
+          mountPath: /vega
+        - name: vega-creds
+          mountPath: "/etc/vega-secrets"
+      containers:
+      - name: vega
+        image: docker.io/vegaprotocol/go-wallet:v0.9.0-pre3
+        command:
+        - 'sh'
+        - '-c'
+        - | 
+          go-wallet service run --console-proxy --no-browser -o json --home /vega
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: "2"
+            memory: 4Gi
+        volumeMounts:
+        - name: vega-data
+          mountPath: /vega
+        - name: vega-creds
+          mountPath: "/etc/vega-secrets"
+          readOnly: true
+      - name: nginx
+        image: nginx:1.15
+        ports:
+          - containerPort: 2789
+            name: http-service
+          - containerPort: 2847
+            name: http-console
+        volumeMounts:
+        - mountPath: /etc/nginx/conf.d
+          name: nginx-proxy
+      volumes:
+      - name: vega-creds
+        secret:
+          secretName: vega-creds
+          items:
+          - key: username
+            path: username
+          - key: password
+            path: password
+      - name: nginx-proxy
+        configMap:
+          name: nginx-proxy
+
+  volumeClaimTemplates:
+  - metadata:
+      name: vega-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: vega-data
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: vega-data
+provisioner: k8s.io/minikube-hostpath
+parameters:
+
